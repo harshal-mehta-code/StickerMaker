@@ -3,6 +3,8 @@
  * Everything here runs in the browser, on plain 2D canvases.
  */
 
+import { blurMask, thresholdMask } from "./mask";
+
 export type AnyCanvas = HTMLCanvasElement | OffscreenCanvas;
 
 export function makeCanvas(width: number, height: number): AnyCanvas {
@@ -107,73 +109,21 @@ export function applyMask(
   return out;
 }
 
-/**
- * Remove stray specks. Matting models often leave little islands (a bit of
- * floor, the corner of a sofa) that would print as confetti. Blobs smaller than
- * a fraction of the biggest one are dropped; the rest are kept, so a cat's tail
- * or an ear tip survives even when the mask breaks it off the body.
- */
-export function removeSpecks(image: ImageData, minRatio = 0.12, alphaThreshold = 24): ImageData {
-  const { width, height, data } = image;
-  const total = width * height;
-  const labels = new Int32Array(total).fill(-1);
-  const queue = new Int32Array(total);
-  const sizes: number[] = [];
+export interface Crop {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
-  for (let start = 0; start < total; start++) {
-    if (labels[start] !== -1 || data[start * 4 + 3] < alphaThreshold) continue;
-    const label = sizes.length;
-    let head = 0;
-    let tail = 0;
-    queue[tail++] = start;
-    labels[start] = label;
-    let size = 0;
-    while (head < tail) {
-      const idx = queue[head++];
-      size++;
-      const x = idx % width;
-      const y = (idx - x) / width;
-      // Inlined rather than looped over a neighbour array: this runs once per
-      // pixel, and a per-pixel allocation here is millions of short-lived
-      // objects on a page that is already tight on memory.
-      let n = idx - 1;
-      if (x > 0 && labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
-        labels[n] = label;
-        queue[tail++] = n;
-      }
-      n = idx + 1;
-      if (x < width - 1 && labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
-        labels[n] = label;
-        queue[tail++] = n;
-      }
-      n = idx - width;
-      if (y > 0 && labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
-        labels[n] = label;
-        queue[tail++] = n;
-      }
-      n = idx + width;
-      if (y < height - 1 && labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
-        labels[n] = label;
-        queue[tail++] = n;
-      }
-    }
-    sizes.push(size);
-  }
-
-  if (sizes.length <= 1) return image;
-  const biggest = Math.max(...sizes);
-  const cutoff = biggest * minRatio;
-  const out = new ImageData(new Uint8ClampedArray(data), width, height);
-  const dst = out.data;
-  for (let i = 0; i < total; i++) {
-    const label = labels[i];
-    if (label === -1 || sizes[label] < cutoff) dst[i * 4 + 3] = 0;
-  }
-  return out;
+export interface Trimmed {
+  canvas: AnyCanvas;
+  /** Where the crop sits in the source image, so it can be reproduced later. */
+  crop: Crop;
 }
 
 /** Crop away fully transparent margins. Returns null when nothing is left. */
-export function trimTransparent(image: ImageData, alphaThreshold = 8): AnyCanvas | null {
+export function trimTransparent(image: ImageData, alphaThreshold = 8): Trimmed | null {
   const { width, height, data } = image;
   let minX = width;
   let minY = height;
@@ -197,7 +147,7 @@ export function trimTransparent(image: ImageData, alphaThreshold = 8): AnyCanvas
   ctxOf(source).putImageData(image, 0, 0);
   const out = makeCanvas(w, h);
   ctxOf(out).drawImage(source as CanvasImageSource, minX, minY, w, h, 0, 0, w, h);
-  return out;
+  return { canvas: out, crop: { x: minX, y: minY, width: w, height: h } };
 }
 
 export interface OutlineOptions {
@@ -365,6 +315,22 @@ export function sharpenAlpha(image: ImageData, edgeTrim: number): ImageData {
     const a = data[p];
     dst[p] = a <= low ? 0 : a >= high ? 255 : Math.round(((a - low) / span) * 255);
   }
+  return out;
+}
+
+/**
+ * Soften an alpha channel's contour without moving it. Runs at render time, so
+ * the smoothing slider is live -- unlike the clean-up done once at extraction,
+ * which needs the full-resolution mask.
+ */
+export function smoothAlpha(image: ImageData, radius: number): ImageData {
+  if (radius <= 0) return image;
+  const { width, height, data } = image;
+  const alpha = new Uint8Array(width * height);
+  for (let i = 0; i < alpha.length; i++) alpha[i] = data[i * 4 + 3];
+  const blurred = thresholdMask(blurMask(alpha, width, height, radius));
+  const out = new ImageData(new Uint8ClampedArray(data), width, height);
+  for (let i = 0; i < alpha.length; i++) out.data[i * 4 + 3] = blurred[i];
   return out;
 }
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { extractSubject, RenderedSticker, renderSticker } from "./pipeline";
+import { Crop } from "./canvas";
+import { extractSubject, RenderedSticker, renderSticker, sourceBehindCutout } from "./pipeline";
 import { getSegmenter, isMockMode, SegmenterState } from "./segmenter";
 import { DEFAULT_SHEET, DEFAULT_STYLE, SheetConfig, StickerItem, StickerStyle } from "./types";
 
@@ -19,6 +20,7 @@ export function useStudio() {
 
   const files = useRef(new Map<string, Blob>());
   const cutouts = useRef(new Map<string, ImageData>());
+  const crops = useRef(new Map<string, Crop>());
   const queue = useRef<string[]>([]);
   const running = useRef(false);
   const styleRef = useRef(style);
@@ -46,8 +48,9 @@ export function useStudio() {
         if (!file) continue;
         patch(id, { status: "working", error: undefined });
         try {
-          const cutout = await extractSubject(file, segmenter);
+          const { cutout, crop } = await extractSubject(file, segmenter);
           cutouts.current.set(id, cutout);
+          crops.current.set(id, crop);
           const rendered = await renderSticker(cutout, styleRef.current);
           patch(id, { status: "ready", error: undefined, stickerUrl: rendered.url, bitmap: rendered.bitmap });
         } catch (err) {
@@ -97,6 +100,7 @@ export function useStudio() {
     });
     files.current.delete(id);
     cutouts.current.delete(id);
+    crops.current.delete(id);
     queue.current = queue.current.filter((queued) => queued !== id);
   }, []);
 
@@ -111,6 +115,7 @@ export function useStudio() {
     });
     files.current.clear();
     cutouts.current.clear();
+    crops.current.clear();
     queue.current = [];
   }, []);
 
@@ -129,6 +134,38 @@ export function useStudio() {
     (id: string, copies: number) => patch(id, { copies: Math.max(1, Math.min(60, copies)) }),
     [patch],
   );
+
+  /** The cut-out a given sticker is currently built from. */
+  const cutoutFor = useCallback((id: string) => cutouts.current.get(id) ?? null, []);
+
+  /** The original photo pixels behind a cut-out, for painting detail back in. */
+  const sourceFor = useCallback(async (id: string) => {
+    const file = files.current.get(id);
+    const cutout = cutouts.current.get(id);
+    const crop = crops.current.get(id);
+    if (!file || !cutout || !crop) return null;
+    return sourceBehindCutout(file, cutout, crop);
+  }, []);
+
+  /** Replace a sticker's cut-out with an edited one and re-render it. */
+  const applyEdit = useCallback(async (id: string, cutout: ImageData) => {
+    cutouts.current.set(id, cutout);
+    const rendered = await renderSticker(cutout, styleRef.current);
+    setItems((prev) =>
+      prev.map((item) => {
+        if (item.id !== id) return item;
+        if (item.stickerUrl) URL.revokeObjectURL(item.stickerUrl);
+        item.bitmap?.close();
+        return {
+          ...item,
+          status: "ready",
+          error: undefined,
+          stickerUrl: rendered.url,
+          bitmap: rendered.bitmap,
+        };
+      }),
+    );
+  }, []);
 
   // Restyling (border width, shadow, edge crispness) re-renders from the stored
   // cut-outs, so the model never has to run again. Results are swapped in as one
@@ -182,6 +219,9 @@ export function useStudio() {
     retry,
     toggleItem,
     setCopies,
+    cutoutFor,
+    sourceFor,
+    applyEdit,
   };
 }
 

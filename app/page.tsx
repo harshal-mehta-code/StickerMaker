@@ -5,6 +5,7 @@ import { Dropzone } from "@/components/Dropzone";
 import { SheetPreview } from "@/components/SheetPreview";
 import { StickerTray } from "@/components/StickerTray";
 import { Diagnostics } from "@/components/Diagnostics";
+import { StickerEditor } from "@/components/StickerEditor";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button, Card, SectionTitle } from "@/components/ui";
 import { deviceProfile } from "@/lib/device";
@@ -73,6 +74,9 @@ function MobileNote() {
 export default function Page() {
   const studio = useStudio();
   const grid = useMemo(() => computeGrid(studio.sheet), [studio.sheet]);
+  const [editing, setEditing] = useState<string | null>(null);
+  const editingItem = studio.items.find((item) => item.id === editing) ?? null;
+  const editingCutout = editing ? studio.cutoutFor(editing) : null;
   const readyCount = studio.items.filter((item) => item.status === "ready" && item.enabled).length;
 
   return (
@@ -126,6 +130,7 @@ export default function Page() {
                 onToggle={studio.toggleItem}
                 onCopies={studio.setCopies}
                 onRetry={studio.retry}
+                onEdit={setEditing}
               />
               {studio.items.length > 0 ? (
                 <>
@@ -158,6 +163,16 @@ export default function Page() {
           </div>
         </div>
       </ErrorBoundary>
+
+      {editingItem && editingCutout ? (
+        <StickerEditor
+          item={editingItem}
+          cutout={editingCutout}
+          loadSource={() => studio.sourceFor(editingItem.id)}
+          onApply={(edited) => studio.applyEdit(editingItem.id, edited)}
+          onClose={() => setEditing(null)}
+        />
+      ) : null}
 
       <footer className="mt-10 text-center text-[11px] font-semibold text-ink-soft">
         Made for sticker paper, scissors and very patient cats. · Photos never leave your device.

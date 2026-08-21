@@ -39,6 +39,8 @@ export interface StickerStyle {
   shadow: boolean;
   /** Cut away semi-transparent fringe pixels below this alpha (0-1). */
   edgeTrim: number;
+  /** Extra contour smoothing, in pixels. Tames a ragged mask edge. */
+  smooth: number;
 }
 
 export type SheetBackground = "transparent" | "white" | "cream" | "blush" | "mint" | "sky";
@@ -64,6 +66,7 @@ export const DEFAULT_STYLE: StickerStyle = {
   outlineColor: "#ffffff",
   shadow: true,
   edgeTrim: 0.35,
+  smooth: 1,
 };
 
 export const DEFAULT_SHEET: SheetConfig = {

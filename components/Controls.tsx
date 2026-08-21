@@ -45,6 +45,15 @@ export function StyleControls({
         format={(value) => (value === 0 ? "none" : `${Math.round(value * 1000) / 10}%`)}
       />
       <Slider
+        label="Edge smoothing"
+        min={0}
+        max={4}
+        step={1}
+        value={style.smooth}
+        onChange={(value) => set("smooth", value)}
+        format={(value) => (value === 0 ? "off" : `${value}px`)}
+      />
+      <Slider
         label="Edge crispness"
         min={0.05}
         max={0.8}

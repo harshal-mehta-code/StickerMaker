@@ -26,12 +26,14 @@ export function StickerTray({
   onToggle,
   onCopies,
   onRetry,
+  onEdit,
 }: {
   items: StickerItem[];
   onRemove: (id: string) => void;
   onToggle: (id: string, enabled: boolean) => void;
   onCopies: (id: string, copies: number) => void;
   onRetry: (id: string) => void;
+  onEdit: (id: string) => void;
 }) {
   if (items.length === 0) {
     return (
@@ -73,10 +75,22 @@ export function StickerTray({
             type="button"
             onClick={() => onRemove(item.id)}
             aria-label={`Remove ${item.fileName}`}
-            className="absolute -right-1.5 -top-1.5 h-6 w-6 rounded-full border-2 border-white bg-ink/80 text-xs font-bold text-white opacity-0 transition-opacity group-hover:opacity-100 focus:opacity-100"
+            className="absolute -right-1.5 -top-1.5 h-6 w-6 rounded-full border-2 border-white bg-ink/80 text-xs font-bold text-white opacity-60 transition-opacity group-hover:opacity-100 focus:opacity-100"
           >
             ×
           </button>
+
+          {item.status === "ready" ? (
+            <button
+              type="button"
+              onClick={() => onEdit(item.id)}
+              aria-label={`Polish ${item.fileName}`}
+              title="Polish this sticker"
+              className="absolute -left-1.5 -top-1.5 h-6 w-6 rounded-full border-2 border-white bg-lilac text-[11px] shadow"
+            >
+              ✏️
+            </button>
+          ) : null}
 
           {item.status === "ready" ? (
             <div className="mt-1 flex items-center justify-center gap-1">
