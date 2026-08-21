@@ -103,7 +103,15 @@ export function StickerTray({
           ) : null}
 
           {item.status === "error" ? (
-            <div className="mt-1 text-center">
+            <div className="mt-1 space-y-1 text-center">
+              {/* The message is the whole point of an error state -- "oops" on
+                  its own tells nobody anything. */}
+              <p
+                title={item.error}
+                className="break-words rounded-lg bg-coral/10 px-1.5 py-1 text-[10px] font-semibold leading-tight text-coral-deep"
+              >
+                {item.error ?? "Something went wrong"}
+              </p>
               <Button size="sm" variant="ghost" onClick={() => onRetry(item.id)}>
                 retry
               </Button>

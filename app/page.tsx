@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Dropzone } from "@/components/Dropzone";
 import { SheetPreview } from "@/components/SheetPreview";
 import { StickerTray } from "@/components/StickerTray";
+import { Diagnostics } from "@/components/Diagnostics";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Button, Card, SectionTitle } from "@/components/ui";
 import { deviceProfile } from "@/lib/device";
@@ -127,12 +128,15 @@ export default function Page() {
                 onRetry={studio.retry}
               />
               {studio.items.length > 0 ? (
-                <div className="flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-ink-soft">{readyCount} on the sheet</span>
-                  <Button size="sm" variant="ghost" onClick={studio.clearAll}>
-                    clear all
-                  </Button>
-                </div>
+                <>
+                  <Diagnostics state={studio.segState} items={studio.items} />
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-ink-soft">{readyCount} on the sheet</span>
+                    <Button size="sm" variant="ghost" onClick={studio.clearAll}>
+                      clear all
+                    </Button>
+                  </div>
+                </>
               ) : null}
             </div>
           </Card>

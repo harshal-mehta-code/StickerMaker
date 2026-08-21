@@ -6,7 +6,7 @@
 export type SegmenterState =
   | { phase: "idle" }
   | { phase: "loading"; backend: string; progress: number; bytes?: number }
-  | { phase: "ready"; backend: string }
+  | { phase: "ready"; backend: string; dtype?: string; bytes?: number; inputSize?: number }
   | { phase: "error"; message: string };
 
 type Pending = {
@@ -49,7 +49,20 @@ export class Segmenter {
           });
           break;
         case "loaded":
-          this.setState({ phase: "ready", backend: data.backend });
+          this.setState({
+            phase: "ready",
+            backend: data.backend,
+            dtype: data.dtype,
+            bytes: data.bytes,
+            inputSize: data.inputSize,
+          });
+          break;
+        case "inputSize":
+          // The model rejected the smaller input and we fell back; keep the
+          // reported diagnostics honest about what is actually running.
+          if (this.state.phase === "ready") {
+            this.setState({ ...this.state, inputSize: data.inputSize });
+          }
           break;
         case "result": {
           const entry = this.pending.get(data.id);
@@ -111,6 +124,7 @@ export class MockSegmenter extends Segmenter {
   }
 
   override async segment(image: ImageData): Promise<Uint8Array> {
+    if (this.state.phase !== "ready") this.setState({ phase: "ready", backend: "mock" });
     const { width, height, data } = image;
     const mask = new Uint8Array(width * height);
     const cx = width / 2;

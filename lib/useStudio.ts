@@ -167,8 +167,6 @@ export function useStudio() {
     return () => clearTimeout(timer);
   }, [style]);
 
-  const warmup = useCallback(() => segmenter.warmup(), [segmenter]);
-
   return {
     items,
     style,
@@ -184,7 +182,6 @@ export function useStudio() {
     retry,
     toggleItem,
     setCopies,
-    warmup,
   };
 }
 

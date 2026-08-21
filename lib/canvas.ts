@@ -21,13 +21,43 @@ export function ctxOf(canvas: AnyCanvas): CanvasRenderingContext2D {
   return ctx as CanvasRenderingContext2D;
 }
 
+/**
+ * Decode a photo through an <img> element. Slower than createImageBitmap, but
+ * it goes through the browser's ordinary image pipeline, which on Safari knows
+ * formats -- HEIC among them -- that the bitmap decoder can refuse.
+ */
+async function decodeViaImageElement(blob: Blob): Promise<ImageBitmap> {
+  const url = URL.createObjectURL(blob);
+  try {
+    const image = new Image();
+    image.decoding = "async";
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("The browser could not decode this image"));
+      image.src = url;
+    });
+    const canvas = makeCanvas(image.naturalWidth, image.naturalHeight);
+    ctxOf(canvas).drawImage(image, 0, 0);
+    return await createImageBitmap(canvas as CanvasImageSource);
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 /** Decode a File into a bitmap, capped so huge phone photos stay manageable. */
 export async function decodeToBitmap(blob: Blob, maxDim = 1400): Promise<ImageBitmap> {
   let bitmap: ImageBitmap;
   try {
     bitmap = await createImageBitmap(blob);
-  } catch {
-    throw new Error("This browser couldn't read that image — try a JPG or PNG");
+  } catch (first) {
+    try {
+      bitmap = await decodeViaImageElement(blob);
+    } catch {
+      throw new Error(
+        `Couldn't read this image (${blob.type || "unknown type"}). ` +
+          `If it's a HEIC photo, re-save it as JPEG and try again. [${(first as Error)?.message ?? first}]`,
+      );
+    }
   }
   const longest = Math.max(bitmap.width, bitmap.height);
   if (longest <= maxDim) return bitmap;
