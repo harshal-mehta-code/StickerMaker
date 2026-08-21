@@ -5,7 +5,7 @@
 
 export type SegmenterState =
   | { phase: "idle" }
-  | { phase: "loading"; backend: string; progress: number }
+  | { phase: "loading"; backend: string; progress: number; bytes?: number }
   | { phase: "ready"; backend: string }
   | { phase: "error"; message: string };
 
@@ -41,7 +41,12 @@ export class Segmenter {
       const data = event.data ?? {};
       switch (data.type) {
         case "loading":
-          this.setState({ phase: "loading", backend: data.backend, progress: data.progress ?? 0 });
+          this.setState({
+            phase: "loading",
+            backend: data.backend,
+            progress: data.progress ?? 0,
+            bytes: data.bytes,
+          });
           break;
         case "loaded":
           this.setState({ phase: "ready", backend: data.backend });
@@ -90,10 +95,7 @@ export class Segmenter {
     const buffer = image.data.buffer.slice(0) as ArrayBuffer;
     return new Promise<Uint8Array>((resolve, reject) => {
       this.pending.set(id, { resolve, reject });
-      worker.postMessage(
-        { type: "segment", id, buffer, width: image.width, height: image.height },
-        [buffer]
-      );
+      worker.postMessage({ type: "segment", id, buffer, width: image.width, height: image.height }, [buffer]);
     });
   }
 }

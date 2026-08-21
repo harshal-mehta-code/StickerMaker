@@ -12,7 +12,7 @@ const EXPORT_DPI = 300;
 
 async function printSheets(pages: AnyCanvas[], widthIn: number, heightIn: number) {
   const urls = await Promise.all(
-    pages.map(async (page) => URL.createObjectURL(await canvasToBlob(page, "image/png")))
+    pages.map(async (page) => URL.createObjectURL(await canvasToBlob(page, "image/png"))),
   );
   const frame = document.createElement("iframe");
   frame.setAttribute("aria-hidden", "true");
@@ -36,8 +36,8 @@ async function printSheets(pages: AnyCanvas[], widthIn: number, heightIn: number
         new Promise<void>((resolve) => {
           if (img.complete) resolve();
           else img.onload = img.onerror = () => resolve();
-        })
-    )
+        }),
+    ),
   );
   frame.contentWindow?.focus();
   frame.contentWindow?.print();
@@ -67,14 +67,14 @@ export function SheetPreview({
       items
         .filter((item) => item.enabled && item.bitmap)
         .map((item) => ({ id: item.id, bitmap: item.bitmap! })),
-    [items]
+    [items],
   );
 
   const copies = useMemo(() => new Map(items.map((item) => [item.id, item.copies])), [items]);
 
   const pages = useMemo(
     () => buildSequence(placeables, sheet, copies, grid),
-    [placeables, sheet, copies, grid]
+    [placeables, sheet, copies, grid],
   );
 
   const pageCount = Math.max(1, pages.length);
@@ -99,7 +99,7 @@ export function SheetPreview({
 
   const renderAll = useCallback(
     () => pages.map((page) => renderPage(page, sheet, grid, { dpi: EXPORT_DPI })),
-    [pages, sheet, grid]
+    [pages, sheet, grid],
   );
 
   const stamp = new Date().toISOString().slice(0, 10);

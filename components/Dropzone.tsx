@@ -12,7 +12,7 @@ export function Dropzone({ onFiles, compact }: { onFiles: (files: File[]) => voi
       setOver(false);
       onFiles(Array.from(event.dataTransfer.files));
     },
-    [onFiles]
+    [onFiles],
   );
 
   return (

@@ -1,6 +1,13 @@
 "use client";
 
-import { PAGE_SIZES, PageSizeId, SHEET_BACKGROUNDS, SheetBackground, SheetConfig, StickerStyle } from "@/lib/types";
+import {
+  PAGE_SIZES,
+  PageSizeId,
+  SHEET_BACKGROUNDS,
+  SheetBackground,
+  SheetConfig,
+  StickerStyle,
+} from "@/lib/types";
 import { Grid } from "@/lib/sheet";
 import { SectionTitle, SegmentedControl, Slider, Swatches, Toggle } from "./ui";
 

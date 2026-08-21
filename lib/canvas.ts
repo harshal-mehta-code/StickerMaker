@@ -52,7 +52,11 @@ export function bitmapToImageData(bitmap: ImageBitmap): ImageData {
  * Multiply an image's alpha channel by a single-channel mask, then clean up the
  * fuzzy fringe that matting models leave around fur.
  */
-export function applyMask(image: ImageData, mask: Uint8Array | Uint8ClampedArray, edgeTrim: number): ImageData {
+export function applyMask(
+  image: ImageData,
+  mask: Uint8Array | Uint8ClampedArray,
+  edgeTrim: number,
+): ImageData {
   const { data, width, height } = image;
   const out = new ImageData(width, height);
   const dst = out.data;
@@ -99,14 +103,26 @@ export function removeSpecks(image: ImageData, minRatio = 0.12, alphaThreshold =
       size++;
       const x = idx % width;
       const y = (idx - x) / width;
-      const neighbours = [
-        x > 0 ? idx - 1 : -1,
-        x < width - 1 ? idx + 1 : -1,
-        y > 0 ? idx - width : -1,
-        y < height - 1 ? idx + width : -1,
-      ];
-      for (const n of neighbours) {
-        if (n < 0 || labels[n] !== -1 || data[n * 4 + 3] < alphaThreshold) continue;
+      // Inlined rather than looped over a neighbour array: this runs once per
+      // pixel, and a per-pixel allocation here is millions of short-lived
+      // objects on a page that is already tight on memory.
+      let n = idx - 1;
+      if (x > 0 && labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
+        labels[n] = label;
+        queue[tail++] = n;
+      }
+      n = idx + 1;
+      if (x < width - 1 && labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
+        labels[n] = label;
+        queue[tail++] = n;
+      }
+      n = idx - width;
+      if (y > 0 && labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
+        labels[n] = label;
+        queue[tail++] = n;
+      }
+      n = idx + width;
+      if (y < height - 1 && labels[n] === -1 && data[n * 4 + 3] >= alphaThreshold) {
         labels[n] = label;
         queue[tail++] = n;
       }
@@ -246,7 +262,7 @@ function buildSilhouette(
   outHeight: number,
   pad: number,
   border: number,
-  color: string
+  color: string,
 ): AnyCanvas {
   const shrink = Math.min(1, SILHOUETTE_SIZE / Math.max(outWidth, outHeight));
   const width = Math.max(1, Math.round(outWidth * shrink));
@@ -262,7 +278,7 @@ function buildSilhouette(
     pad * shrink,
     pad * shrink,
     scaled.width * shrink,
-    scaled.height * shrink
+    scaled.height * shrink,
   );
 
   const radius = border * shrink;
@@ -275,11 +291,7 @@ function buildSilhouette(
     const ctx = ctxOf(next);
     for (let i = 0; i < steps; i++) {
       const angle = (i / steps) * Math.PI * 2;
-      ctx.drawImage(
-        current as CanvasImageSource,
-        Math.cos(angle) * passRadius,
-        Math.sin(angle) * passRadius
-      );
+      ctx.drawImage(current as CanvasImageSource, Math.cos(angle) * passRadius, Math.sin(angle) * passRadius);
     }
     ctx.drawImage(current as CanvasImageSource, 0, 0);
     current = next;
@@ -302,7 +314,7 @@ export async function canvasToBlob(canvas: AnyCanvas, type = "image/png", qualit
     (canvas as HTMLCanvasElement).toBlob(
       (blob) => (blob ? resolve(blob) : reject(new Error("Canvas export failed"))),
       type,
-      quality
+      quality,
     );
   });
 }

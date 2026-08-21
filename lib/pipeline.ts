@@ -11,11 +11,9 @@ import {
   sharpenAlpha,
   trimTransparent,
 } from "./canvas";
+import { cutoutLimit, decodeLimit, deviceProfile } from "./device";
 import { Segmenter } from "./segmenter";
 import { StickerStyle } from "./types";
-
-/** Longest side kept for the stored cut-out. Plenty for a 3" sticker at 300 dpi. */
-const CUTOUT_MAX = 1000;
 
 export class NoSubjectFoundError extends Error {
   constructor() {
@@ -30,7 +28,8 @@ export class NoSubjectFoundError extends Error {
  * re-tuned later without re-running the model.
  */
 export async function extractSubject(file: Blob, segmenter: Segmenter): Promise<ImageData> {
-  const bitmap = await decodeToBitmap(file, 1400);
+  const profile = deviceProfile();
+  const bitmap = await decodeToBitmap(file, decodeLimit(profile));
   try {
     const source = bitmapToImageData(bitmap);
     const mask = await segmenter.segment(source);
@@ -38,7 +37,7 @@ export async function extractSubject(file: Blob, segmenter: Segmenter): Promise<
     const despeckled = removeSpecks(masked);
     const trimmed = trimTransparent(despeckled);
     if (!trimmed) throw new NoSubjectFoundError();
-    return canvasToImageData(limitCanvas(trimmed, CUTOUT_MAX));
+    return canvasToImageData(limitCanvas(trimmed, cutoutLimit(profile)));
   } finally {
     bitmap.close();
   }

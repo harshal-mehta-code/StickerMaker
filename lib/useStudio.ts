@@ -3,13 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { extractSubject, RenderedSticker, renderSticker } from "./pipeline";
 import { getSegmenter, isMockMode, SegmenterState } from "./segmenter";
-import {
-  DEFAULT_SHEET,
-  DEFAULT_STYLE,
-  SheetConfig,
-  StickerItem,
-  StickerStyle,
-} from "./types";
+import { DEFAULT_SHEET, DEFAULT_STYLE, SheetConfig, StickerItem, StickerStyle } from "./types";
 
 let idCounter = 0;
 const nextId = () => `sticker-${Date.now().toString(36)}-${++idCounter}`;
@@ -88,7 +82,7 @@ export function useStudio() {
       queue.current.push(...created.map((item) => item.id));
       void pump();
     },
-    [pump]
+    [pump],
   );
 
   const removeItem = useCallback((id: string) => {
@@ -127,13 +121,13 @@ export function useStudio() {
       queue.current.push(id);
       void pump();
     },
-    [patch, pump]
+    [patch, pump],
   );
 
   const toggleItem = useCallback((id: string, enabled: boolean) => patch(id, { enabled }), [patch]);
   const setCopies = useCallback(
     (id: string, copies: number) => patch(id, { copies: Math.max(1, Math.min(60, copies)) }),
-    [patch]
+    [patch],
   );
 
   // Restyling (border width, shadow, edge crispness) re-renders from the stored
@@ -164,7 +158,7 @@ export function useStudio() {
             if (item.stickerUrl) URL.revokeObjectURL(item.stickerUrl);
             item.bitmap?.close();
             return { ...item, status: "ready", stickerUrl: result.url, bitmap: result.bitmap };
-          })
+          }),
         );
       } finally {
         if (token === generation.current) setRestyling(false);

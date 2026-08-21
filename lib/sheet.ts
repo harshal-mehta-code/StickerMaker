@@ -55,7 +55,12 @@ export interface Placeable {
 }
 
 /** Expand the chosen stickers (honouring copies, shuffle and fill) into slots. */
-export function buildSequence(items: Placeable[], sheet: SheetConfig, copies: Map<string, number>, grid: Grid): Placeable[][] {
+export function buildSequence(
+  items: Placeable[],
+  sheet: SheetConfig,
+  copies: Map<string, number>,
+  grid: Grid,
+): Placeable[][] {
   const flat: Placeable[] = [];
   for (const item of items) {
     const n = Math.max(1, copies.get(item.id) ?? 1);
@@ -92,7 +97,12 @@ export interface RenderOptions {
   opaquePaper?: boolean;
 }
 
-export function renderPage(page: Placeable[], sheet: SheetConfig, grid: Grid, opts: RenderOptions): AnyCanvas {
+export function renderPage(
+  page: Placeable[],
+  sheet: SheetConfig,
+  grid: Grid,
+  opts: RenderOptions,
+): AnyCanvas {
   const { dpi } = opts;
   const widthPx = Math.round(grid.pageWidthIn * dpi);
   const heightPx = Math.round(grid.pageHeightIn * dpi);
