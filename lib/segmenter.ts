@@ -57,13 +57,6 @@ export class Segmenter {
             inputSize: data.inputSize,
           });
           break;
-        case "inputSize":
-          // The model rejected the smaller input and we fell back; keep the
-          // reported diagnostics honest about what is actually running.
-          if (this.state.phase === "ready") {
-            this.setState({ ...this.state, inputSize: data.inputSize });
-          }
-          break;
         case "result": {
           const entry = this.pending.get(data.id);
           if (entry) {
@@ -97,10 +90,6 @@ export class Segmenter {
     return worker;
   }
 
-  warmup() {
-    this.ensureWorker().postMessage({ type: "warmup" });
-  }
-
   /** Returns a single-channel alpha mask the same size as the input. */
   segment(image: ImageData): Promise<Uint8Array> {
     const worker = this.ensureWorker();
@@ -119,10 +108,6 @@ export class Segmenter {
  * centre oval and drops pixels that match the photo's border colour.
  */
 export class MockSegmenter extends Segmenter {
-  override warmup() {
-    this.setState({ phase: "ready", backend: "mock" });
-  }
-
   override async segment(image: ImageData): Promise<Uint8Array> {
     if (this.state.phase !== "ready") this.setState({ phase: "ready", backend: "mock" });
     const { width, height, data } = image;

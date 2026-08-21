@@ -11,17 +11,23 @@
  * Memory is the constraint that shapes the rest. RMBG-1.4 is an IS-Net, whose
  * early layers hold 64 channels at the full input resolution -- at 1024 square
  * that is a ~270 MB tensor, on top of ~176 MB of full-precision weights. Mobile
- * Safari kills a tab well before that, so on a constrained device we take the
- * quantised weights and run the model at half the side length.
+ * Safari kills a tab well before that, so a constrained device takes the
+ * quantised weights and feeds the model smaller photos.
+ *
+ * Running the model itself smaller is not on the table: this ONNX export pins
+ * its input at 1024 square, and onnxruntime rejects anything else outright.
  */
 import { AutoModel, Tensor, env } from "@huggingface/transformers";
-import { deviceProfile, inferenceSize } from "./device";
+import { deviceProfile } from "./device";
 
 env.allowLocalModels = false;
 
 const MODEL_ID = "briaai/RMBG-1.4";
-/** The size RMBG-1.4 was trained at, and the fallback if a smaller one fails. */
-const NATIVE_INPUT_SIZE = 1024;
+/**
+ * Fixed by the model. The graph declares static 1024x1024 input dimensions, so
+ * this is a fact about the export rather than a tuning knob.
+ */
+const INPUT_SIZE = 1024;
 const IMAGE_MEAN = 0.5;
 const IMAGE_STD = 1.0;
 
@@ -69,8 +75,6 @@ function formatBytes(bytes: number) {
 interface Loaded {
   model: any;
   backend: string;
-  inputSize: number;
-  constrained: boolean;
 }
 
 let loading: Promise<Loaded> | null = null;
@@ -124,9 +128,8 @@ function load(): Promise<Loaded> {
             }
           },
         } as any);
-        const inputSize = inferenceSize(profile);
-        post({ type: "loaded", backend: device, dtype, bytes, inputSize });
-        return { model, backend: device, inputSize, constrained: profile.constrained };
+        post({ type: "loaded", backend: device, dtype, bytes, inputSize: INPUT_SIZE });
+        return { model, backend: device };
       } catch (err) {
         tried.push(`${device}/${dtype}: ${(err as Error)?.message ?? err}`);
       }
@@ -226,27 +229,8 @@ function postprocess(
   return alpha;
 }
 
-/**
- * Did the runtime reject the input's shape, rather than run out of room?
- *
- * ONNX exports often pin their input dimensions, and onnxruntime reports that
- * as an ordinary error. It reads nothing like an allocation failure, and the
- * two want opposite responses: a rejected shape should be retried at the size
- * the model expects, while a memory failure must never be retried bigger.
- */
-function isShapeError(err: unknown): boolean {
-  const message = String((err as Error)?.message ?? err).toLowerCase();
-  return (
-    message.includes("dimension") ||
-    message.includes("shape") ||
-    message.includes("rank") ||
-    message.includes("invalid input") ||
-    message.includes("invalid rank")
-  );
-}
-
-async function infer(loaded: Loaded, buffer: ArrayBuffer, width: number, height: number, size: number) {
-  const tensor = preprocess(buffer, width, height, size);
+async function infer(loaded: Loaded, buffer: ArrayBuffer, width: number, height: number) {
+  const tensor = preprocess(buffer, width, height, INPUT_SIZE);
   // Feed the tensor under whatever the graph actually calls its input.
   const inputName: string = loaded.model?.sessions?.model?.inputNames?.[0] ?? "input";
   const result = await loaded.model({ [inputName]: tensor });
@@ -258,15 +242,6 @@ async function infer(loaded: Loaded, buffer: ArrayBuffer, width: number, height:
 
 self.onmessage = async (event: MessageEvent) => {
   const data = event.data ?? {};
-
-  if (data.type === "warmup") {
-    try {
-      await load();
-    } catch (err) {
-      post({ type: "error", id: null, message: (err as Error).message });
-    }
-    return;
-  }
 
   if (data.type !== "segment") return;
   const { id, buffer, width, height } = data as {
@@ -287,29 +262,7 @@ self.onmessage = async (event: MessageEvent) => {
   }
 
   try {
-    let alpha: Uint8Array;
-    try {
-      alpha = await infer(loaded, buffer, width, height, loaded.inputSize);
-    } catch (err) {
-      if (loaded.inputSize === NATIVE_INPUT_SIZE) throw err;
-      if (loaded.constrained && !isShapeError(err)) {
-        // Running out of memory is the one failure not worth retrying bigger:
-        // the native size is what takes a phone's browser tab down.
-        console.error(`Inference at ${loaded.inputSize}px failed`, err);
-        throw new Error(
-          `Cut-out failed at ${loaded.inputSize}px on this device — ${(err as Error)?.message ?? err}`,
-        );
-      }
-      // This export pins its input dimensions, so the smaller run was never
-      // going to be accepted. Retry at the size the model was trained at and
-      // remember it, so this costs one rejected attempt rather than one per
-      // photo. Safe even on a phone: a rejected shape is not a memory problem,
-      // and a constrained device is already on the quantised weights.
-      console.warn(`Inference at ${loaded.inputSize}px rejected, retrying at ${NATIVE_INPUT_SIZE}px`, err);
-      loaded.inputSize = NATIVE_INPUT_SIZE;
-      post({ type: "inputSize", inputSize: NATIVE_INPUT_SIZE });
-      alpha = await infer(loaded, buffer, width, height, NATIVE_INPUT_SIZE);
-    }
+    const alpha = await infer(loaded, buffer, width, height);
     post({ type: "result", id, alpha, width, height }, [alpha.buffer]);
   } catch (err) {
     post({ type: "error", id, message: (err as Error)?.message ?? "Cut-out failed" });

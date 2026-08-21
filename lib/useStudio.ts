@@ -49,7 +49,7 @@ export function useStudio() {
           const cutout = await extractSubject(file, segmenter);
           cutouts.current.set(id, cutout);
           const rendered = await renderSticker(cutout, styleRef.current);
-          patch(id, { status: "ready", stickerUrl: rendered.url, bitmap: rendered.bitmap });
+          patch(id, { status: "ready", error: undefined, stickerUrl: rendered.url, bitmap: rendered.bitmap });
         } catch (err) {
           patch(id, {
             status: "error",

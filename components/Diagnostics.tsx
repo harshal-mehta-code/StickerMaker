@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cutoutLimit, decodeLimit, deviceProfile, inferenceSize } from "@/lib/device";
+import { cutoutLimit, decodeLimit, deviceProfile } from "@/lib/device";
 import { SegmenterState } from "@/lib/segmenter";
 import { StickerItem } from "@/lib/types";
 
@@ -27,7 +27,7 @@ export function Diagnostics({ state, items }: { state: SegmenterState; items: St
       state.phase === "ready"
         ? `weights: ${state.dtype ?? "?"}${state.bytes ? ` · ${Math.round(state.bytes / (1024 * 1024))} MB` : ""}`
         : null,
-      `inference: ${state.phase === "ready" && state.inputSize ? state.inputSize : inferenceSize(profile)} px`,
+      `inference: ${state.phase === "ready" && state.inputSize ? `${state.inputSize} px` : "not started"}`,
       `limits: decode ${decodeLimit(profile)} px · cut-out ${cutoutLimit(profile)} px`,
       `screen: ${window.innerWidth}x${window.innerHeight} @${window.devicePixelRatio}`,
       `ua: ${navigator.userAgent}`,

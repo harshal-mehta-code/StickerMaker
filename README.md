@@ -45,27 +45,35 @@ Add `?mock=1` to the URL to swap the model for a crude stand-in cut-out. It
 skips the download entirely, which is handy for working on layout and export
 without waiting on model weights (and for automated tests).
 
-## Memory, and why phones get a different model
+## Memory, and why phones get different settings
 
 RMBG-1.4 is an IS-Net. Its early layers hold 64 channels at the full input
-resolution, so a 1024 x 1024 run needs a single ~270 MB activation tensor, on
-top of ~176 MB of full-precision weights. Desktop browsers shrug at that; iOS
-Safari kills the tab, which surfaces as "a problem repeatedly occurred".
+resolution, so a run needs a single ~270 MB activation tensor, on top of the
+weights. Desktop browsers shrug at that; iOS Safari kills the tab, which
+surfaces as "a problem repeatedly occurred".
 
-So the studio sizes the job to the device:
+The one knob that is *not* available is the model's own input size: this ONNX
+export declares static 1024 x 1024 dimensions, and onnxruntime rejects anything
+else outright. So the savings come from the weights and the images:
 
 | | desktop | phone / tablet |
 | --- | --- | --- |
-| weights | full precision preferred | quantised preferred (~4x smaller) |
-| inference size | 1024 px | 512 px (~4x less activation memory) |
-| photo decoded to | 1400 px | 900 px |
+| weights | full precision preferred | quantised preferred (~42 MB vs ~176 MB) |
+| inference size | 1024 px | 1024 px (fixed by the model) |
+| photo decoded to | 1400 px | 1024 px |
 | cut-out kept at | 1000 px | 700 px |
 
-Two rules keep it honest. Before downloading anything it sends a `HEAD` request
-for each weight file, so it knows what exists and how big it is rather than
-discovering a 404 part-way through a large download — and the real size is shown
-in the progress banner. And on a small device it will refuse a model that
-won't fit, and say so, rather than starting a download that takes the tab down.
+Before downloading anything it sends a `HEAD` request for each weight file, so
+it knows what exists and how big it is rather than discovering a 404 part-way
+through a large download, and the real size is shown in the progress banner. On
+a small device it will refuse a model that won't fit, and say so, rather than
+starting a download that takes the tab down.
+
+When a cut-out does fail, the message is shown on the thumbnail, and the
+"What's running under the hood" panel under the photo tray reports the device,
+backend, weights, limits and every failure, with a copy button. Cut-outs happen
+on-device, so there is no server log — that panel is the only way the details
+reach anyone who can act on them.
 
 ## Printing tips
 

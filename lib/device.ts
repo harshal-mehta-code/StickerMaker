@@ -31,21 +31,16 @@ export function deviceProfile(): DeviceProfile {
   };
 }
 
-/** Longest side a photo is decoded to before anything else touches it. */
+/**
+ * Longest side a photo is decoded to before anything else touches it. The model
+ * resamples to 1024 square regardless, so going below that on a small device
+ * only costs detail -- match it rather than upscaling into the model.
+ */
 export function decodeLimit(profile: DeviceProfile): number {
-  return profile.constrained ? 900 : 1400;
+  return profile.constrained ? 1024 : 1400;
 }
 
 /** Longest side of the cut-out kept in memory for restyling. */
 export function cutoutLimit(profile: DeviceProfile): number {
   return profile.constrained ? 700 : 1000;
-}
-
-/**
- * Side length the matting model runs at. RMBG-1.4 is fully convolutional, so a
- * smaller square still works and cuts activation memory by the square of the
- * ratio -- the single biggest saving available on a phone.
- */
-export function inferenceSize(profile: DeviceProfile): number {
-  return profile.constrained ? 512 : 1024;
 }
