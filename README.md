@@ -70,8 +70,8 @@ die-cut edge). Both re-render from the stored cut-out, so they are live.
 
 ## Polishing a sticker by hand
 
-No mask is right every time, so each sticker has an editor (the ✏️ on its
-thumbnail):
+No mask is right every time, so each sticker has a full-screen editor (the ✏️
+on its thumbnail):
 
 - **Zap blob** — tap a leftover lump and the whole connected region goes. This
   is the one-tap answer to "it kept a scrap of the sofa".
@@ -79,7 +79,16 @@ thumbnail):
 - **Bring back** — paint back a bit the cut-out missed. "Show what was cut"
   fades the discarded pixels in so it is obvious where to paint.
 
-Undo keeps the last dozen steps. It stores alpha snapshots only, since the
+**Zoom and pan** are what make fine work possible: pinch or scroll to zoom,
+drag with two fingers (or one, with ✋, or with any tool that has no drag
+action) to pan, and `+` / `-` / `0` on a keyboard. The brush is sized in image
+pixels, so zooming in is what buys precision — the same 120-pixel gesture on
+screen covers 985 image pixels at fit and 102 at 967%.
+
+Two rules keep gestures from costing you work. A blob tap fires on *release*,
+not on contact, so the first finger of a pinch cannot delete anything; and if a
+second finger lands mid-stroke, the stroke is rolled back before the zoom
+begins. Undo keeps the last dozen steps, storing alpha snapshots only since the
 colour channels never change — on a phone that is the difference between
 working and not.
 
