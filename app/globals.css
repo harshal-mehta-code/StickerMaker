@@ -1,0 +1,125 @@
+@import "tailwindcss";
+
+@theme {
+  --color-cream: #fff7ef;
+  --color-cream-deep: #fdeade;
+  --color-paper: #ffffff;
+  --color-ink: #4a3b33;
+  --color-ink-soft: #937f70;
+  --color-line: #f2e2d3;
+  --color-coral: #ff8a7a;
+  --color-coral-deep: #ef6553;
+  --color-mint: #7ed3b2;
+  --color-mint-deep: #4bb992;
+  --color-butter: #ffd98e;
+  --color-lilac: #bfb2f6;
+  --color-sky: #9fc9f5;
+
+  --font-display: var(--font-baloo), "Trebuchet MS", ui-rounded, system-ui, sans-serif;
+  --font-sans: var(--font-nunito), ui-rounded, system-ui, sans-serif;
+
+  --radius-blob: 2rem;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-cream);
+  background-image:
+    radial-gradient(circle at 12% 8%, rgba(255, 217, 142, 0.35), transparent 42%),
+    radial-gradient(circle at 88% 12%, rgba(191, 178, 246, 0.3), transparent 40%),
+    radial-gradient(circle at 50% 105%, rgba(126, 211, 178, 0.28), transparent 45%);
+  background-attachment: fixed;
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Chunky "pressable" buttons with a solid bottom edge. */
+.btn-pop {
+  transition: transform 120ms ease, box-shadow 120ms ease, filter 120ms ease;
+}
+.btn-pop:not(:disabled):hover {
+  transform: translateY(-1px);
+  filter: brightness(1.03);
+}
+.btn-pop:not(:disabled):active {
+  transform: translateY(2px);
+  box-shadow: none !important;
+}
+.btn-pop:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The transparent-sticker checkerboard. */
+.checkerboard {
+  background-color: #fff;
+  background-image:
+    linear-gradient(45deg, #f1e6da 25%, transparent 25%),
+    linear-gradient(-45deg, #f1e6da 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, #f1e6da 75%),
+    linear-gradient(-45deg, transparent 75%, #f1e6da 75%);
+  background-size: 14px 14px;
+  background-position: 0 0, 0 7px, 7px -7px, -7px 0;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 10px;
+  border-radius: 999px;
+  background: var(--color-cream-deep);
+  outline: none;
+  border: 1px solid var(--color-line);
+}
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: var(--color-coral);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 0 rgba(74, 59, 51, 0.18);
+  cursor: pointer;
+}
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--color-coral);
+  border: 3px solid #fff;
+  box-shadow: 0 2px 0 rgba(74, 59, 51, 0.18);
+  cursor: pointer;
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+.animate-wiggle {
+  animation: wiggle 1.6s ease-in-out infinite;
+}
+
+@keyframes float-slow {
+  0%, 100% { transform: translateY(0) rotate(var(--tilt, 0deg)); }
+  50% { transform: translateY(-10px) rotate(var(--tilt, 0deg)); }
+}
+.animate-float {
+  animation: float-slow 6s ease-in-out infinite;
+}
+
+@media print {
+  body {
+    background: #fff;
+  }
+}
